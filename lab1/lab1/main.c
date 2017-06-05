@@ -5,20 +5,31 @@
 
 #include "bee2/crypto/belt.h"
 #include "stdio.h"
-
+#ifdef OS_WIN
+	#include <locale.h>
+#endif
 
 octet theta[32];
 octet pwd[8];  
 octet state[1024];
-octet buf[65536];
+octet buf[64];
 octet mac[8];
+octet mac1[8];
 octet iv[16];
+size_t count;
+size_t bufCount = sizeof(buf);
+
 
 
 
 int help();
 
 int main(int argc, char* argv[]) {
+
+
+#ifdef OS_WIN
+	setlocale(LC_ALL, "russian_belarus.1251");
+#endif
 	// Нет входных параметров
 	if (argc < 2) 
 		return help();
@@ -28,9 +39,10 @@ int main(int argc, char* argv[]) {
 		return help();
 
 	//параметры для шифрования
-	if (argc == 6 && strCmp(argv[1], "-e") == 0 &&
-		strCmp(argv[2], "-f") == 0 &&
-		strCmp(argv[4], "-p") == 0) {
+	if (argc == 8 && strCmp(argv[1], "-e") == 0 &&
+		strCmp(argv[2], "-fin") == 0 &&
+		strCmp(argv[4], "-fout") == 0 &&
+		strCmp(argv[6], "-p") == 0) {
 
 	//генерация синхропосылки
 		char p[16];
@@ -39,71 +51,123 @@ int main(int argc, char* argv[]) {
 			p[i] = a[rand() % 48];
 		memCopy(iv, p, 16);
 			
-		FILE* fp = fopen(argv[3], "rb");
+		FILE* fpin = fopen(argv[3], "rb");
+		FILE* fpout = fopen(argv[5], "wb");
 		
 	//размер файла	
 		long nFileLen = 0;
-		if (fp)
+		if (fpin)
 		{
-			fseek(fp, 0, SEEK_END);
-			nFileLen = ftell(fp);
-			fclose(fp);
+			fseek(fpin, 0, SEEK_END);
+			nFileLen = ftell(fpin);
+			fclose(fpin);
 		}
-		fp = fopen(argv[3], "rb");
-		fread(buf, 1, nFileLen, fp);
-		fclose(fp);
-		memCopy(pwd, argv[5], strLen(argv[5]));
-		fp = fopen(argv[3], "wb");
+		fpin = fopen(argv[3], "rb");
 
 	//запись синхропосылки
-		fwrite(iv, 1, 16, fp);
+		fwrite(iv, 1, 16, fpout);
 		
+		memCopy(pwd, argv[7], strLen(argv[7]));
+
 	//построение ключа по паролю	
 		beltPBKDF(theta, (const octet*)pwd, strLen((const char*)pwd), 10000, iv, 16);
 		beltDWPStart(state, theta, 32, iv);
-		beltDWPStepI(buf, nFileLen, state);
-
-	//Шифруем
-		beltDWPStepE(buf, nFileLen, state);
-		beltDWPStepA(buf, nFileLen, state);
 		beltDWPStepG(mac, state);
-		beltDWPStepV(mac, state);
+
+		while (nFileLen >= 0)
+		{
+			if (nFileLen < 64) {
+				bufCount = nFileLen;
+			};
+			count = fread(buf, 1, bufCount, fpin);
+			if (count == 0)
+			{
+				if (ferror(fpin))
+				{
+					fclose(fpin);
+					fclose(fpout);
+					printf("%s: FAILED [read]\n", argv[3]);
+					return -1;
+				}
+				break;
+			}
+
+
+			nFileLen -= 64;
+			beltDWPStepE(buf, bufCount, state);
+			fwrite(buf, 1, bufCount, fpout);
+		}
+
+		
 
 	//запись имитовставки
-		fwrite(buf, 1, nFileLen, fp);
-		fwrite(mac, 1, 8, fp);
-		fclose(fp);
+		fwrite(mac, 1, 8, fpout);
+		fclose(fpin);
+		fclose(fpout);
 	} else
-	if (argc == 6 && strCmp(argv[1], "-d") == 0 &&
-		strCmp(argv[2], "-f") == 0 &&
-		strCmp(argv[4], "-p") == 0) {
+	if (argc == 8 && strCmp(argv[1], "-d") == 0 &&
+		strCmp(argv[2], "-fin") == 0 &&
+		strCmp(argv[4], "-fout") == 0 &&
+		strCmp(argv[6], "-p") == 0) {
 
-		FILE* fp = fopen(argv[3], "rb");
-		
-	//размер файла	
+		//memCopy(pwd, argv[7], strLen(argv[7]));
+
+		FILE* fpin = fopen(argv[3], "rb");
+		FILE* fpout = fopen(argv[5], "wb");
+		//размер файла	
 		long nFileLen = 0;
-		if (fp)
+		if (fpin)
 		{
-			fseek(fp, 0, SEEK_END);
-			nFileLen = ftell(fp);
-			fclose(fp);
+			fseek(fpin, 0, SEEK_END);
+			nFileLen = ftell(fpin);
+			fclose(fpin);
 		}
-		long bufLen = nFileLen -24;
-		fp = fopen(argv[3], "rb");
-		fread(iv, 1, 16, fp);
-		memCopy(pwd, argv[5], strLen(argv[5]));
-		fread(buf, 1, bufLen, fp);
+		fpin = fopen(argv[3], "rb");
+		
+		fseek(fpin, nFileLen-8, SEEK_SET);
+		fread(mac1, 1, 8, fpin);
+
+		rewind(fpin);
+		fread(iv, 1, 16, fpin);
 		
 	//построение ключа по паролю	
-		beltPBKDF(theta, (const octet*)pwd, strLen((const char*)pwd), 10000,iv, 16);
+		beltPBKDF(theta, (const octet*)argv[7], strLen((const char*)argv[7]), 10000, iv, 16);
 		beltDWPStart(state, theta, 32, iv);
+		beltDWPStepG(mac, state);
 
-	//расшифровываем
-		beltDWPStepD(buf, bufLen, state); 
-		fclose(fp);
-		fp = fopen(argv[3], " wb");
-		fwrite(buf, 1, bufLen, fp);
-		fclose(fp);
+		if (strCmp(mac, mac1) != 0) {
+			printf("Failed\n");
+			fclose(fpin);
+			fclose(fpout);
+			return 0;
+		}
+
+		nFileLen -= 24;
+		while (nFileLen > 0)
+		{
+			if (nFileLen < 64) {
+				bufCount = nFileLen;
+			};
+			count = fread(buf, 1, bufCount, fpin);
+			if (count == 0)
+			{
+				if (ferror(fpin))
+				{
+					fclose(fpin);
+					fclose(fpout);
+					printf("%s: FAILED [read]\n", argv[3]);
+					return -1;
+				}
+				break;
+			}
+			nFileLen -= 64;
+			beltDWPStepD(buf, bufCount, state);
+
+			fwrite(buf, 1, bufCount, fpout);
+		}
+		
+		fclose(fpin);
+		fclose(fpout);
 	}
 	else { return help(); }
 	return 0;
