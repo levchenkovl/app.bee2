@@ -135,6 +135,7 @@ int main(int argc, char* argv[]) {
 		beltDWPStart(state, theta, 32, iv);
 		beltDWPStepG(mac, state);
 
+	//проверка имитовставки
 		if (strCmp(mac, mac1) != 0) {
 			printf("Failed\n");
 			fclose(fpin);
