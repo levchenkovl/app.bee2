@@ -19,29 +19,29 @@ octet iv[16];
 int help();
 
 int main(int argc, char* argv[]) {
-	// Нет входных параметров
+	// РќРµС‚ РІС…РѕРґРЅС‹С… РїР°СЂР°РјРµС‚СЂРѕРІ
 	if (argc < 2) 
 		return help();
 
-	// Вывод справки
+	// Р’С‹РІРѕРґ СЃРїСЂР°РІРєРё
 	if (argc == 2 && strCmp(argv[1], "-h") == 0)
 		return help();
 
-	//параметры для шифрования
+	//РїР°СЂР°РјРµС‚СЂС‹ РґР»СЏ С€РёС„СЂРѕРІР°РЅРёСЏ
 	if (argc == 6 && strCmp(argv[1], "-e") == 0 &&
 		strCmp(argv[2], "-f") == 0 &&
 		strCmp(argv[4], "-p") == 0) {
 
-	//генерация синхропосылки
+	//РіРµРЅРµСЂР°С†РёСЏ СЃРёРЅС…СЂРѕРїРѕСЃС‹Р»РєРё
 		char p[16];
-		char a[] = "abcdefghijklmonpqrstuvwxyz1234568709йфячыцувсмакепитрнгоьблшщдюзжхэъ";
+		char a[] = "abcdefghijklmonpqrstuvwxyz1234568709Р№С„СЏС‡С‹С†СѓРІСЃРјР°РєРµРїРёС‚СЂРЅРіРѕСЊР±Р»С€С‰РґСЋР·Р¶С…СЌСЉ";
 		for (int i = 0;i < 16;i++)
 			p[i] = a[rand() % 48];
 		memCopy(iv, p, 16);
 			
 		FILE* fp = fopen(argv[3], "rb");
 		
-	//размер файла	
+	//СЂР°Р·РјРµСЂ С„Р°Р№Р»Р°	
 		long nFileLen = 0;
 		if (fp)
 		{
@@ -55,21 +55,21 @@ int main(int argc, char* argv[]) {
 		memCopy(pwd, argv[5], strLen(argv[5]));
 		fp = fopen(argv[3], "wb");
 
-	//запись синхропосылки
+	//Р·Р°РїРёСЃСЊ СЃРёРЅС…СЂРѕРїРѕСЃС‹Р»РєРё
 		fwrite(iv, 1, 16, fp);
 		
-	//построение ключа по паролю	
+	//РїРѕСЃС‚СЂРѕРµРЅРёРµ РєР»СЋС‡Р° РїРѕ РїР°СЂРѕР»СЋ	
 		beltPBKDF(theta, (const octet*)pwd, strLen((const char*)pwd), 10000, iv, 16);
 		beltDWPStart(state, theta, 32, iv);
 		beltDWPStepI(buf, nFileLen, state);
 
-	//Шифруем
+	//РЁРёС„СЂСѓРµРј
 		beltDWPStepE(buf, nFileLen, state);
 		beltDWPStepA(buf, nFileLen, state);
 		beltDWPStepG(mac, state);
 		beltDWPStepV(mac, state);
 
-	//запись имитовставки
+	//Р·Р°РїРёСЃСЊ РёРјРёС‚РѕРІСЃС‚Р°РІРєРё
 		fwrite(buf, 1, nFileLen, fp);
 		fwrite(mac, 1, 8, fp);
 		fclose(fp);
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
 
 		FILE* fp = fopen(argv[3], "rb");
 		
-	//размер файла	
+	//СЂР°Р·РјРµСЂ С„Р°Р№Р»Р°	
 		long nFileLen = 0;
 		if (fp)
 		{
@@ -94,11 +94,11 @@ int main(int argc, char* argv[]) {
 		memCopy(pwd, argv[5], strLen(argv[5]));
 		fread(buf, 1, bufLen, fp);
 		
-	//построение ключа по паролю	
+	//РїРѕСЃС‚СЂРѕРµРЅРёРµ РєР»СЋС‡Р° РїРѕ РїР°СЂРѕР»СЋ	
 		beltPBKDF(theta, (const octet*)pwd, strLen((const char*)pwd), 10000,iv, 16);
 		beltDWPStart(state, theta, 32, iv);
 
-	//расшифровываем
+	//СЂР°СЃС€РёС„СЂРѕРІС‹РІР°РµРј
 		beltDWPStepD(buf, bufLen, state); 
 		fclose(fp);
 		fp = fopen(argv[3], " wb");
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
 }
 
 
-//справка
+//СЃРїСЂР°РІРєР°
 int help() {
 	printf(
 		"------------------------------------------------------------------------------------------------------\n"
