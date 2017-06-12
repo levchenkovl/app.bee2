@@ -53,16 +53,28 @@ int main(int argc, char* argv[]) {
 			
 		FILE* fpin = fopen(argv[3], "rb");
 		FILE* fpout = fopen(argv[5], "wb");
-		
+		if (!fpin)
+		{
+			printf("%s: FAILED [open]\n", argv[3]);
+			return -1;
+		}
+		if (!fpout)
+		{
+			printf("%s: FAILED [open]\n", argv[5]);
+			return -1;
+		}
 	//размер файла	
 		long nFileLen = 0;
-		if (fpin)
-		{
 			fseek(fpin, 0, SEEK_END);
 			nFileLen = ftell(fpin);
 			fclose(fpin);
-		}
+		
 		fpin = fopen(argv[3], "rb");
+		if (!fpin)
+		{
+			printf("%s: FAILED [open]\n", argv[3]);
+			return -1;
+		}
 
 	//запись синхропосылки
 		fwrite(iv, 1, 16, fpout);
@@ -114,6 +126,16 @@ int main(int argc, char* argv[]) {
 
 		FILE* fpin = fopen(argv[3], "rb");
 		FILE* fpout = fopen(argv[5], "wb");
+		if (!fpin)
+		{
+			printf("%s: FAILED [open]\n", argv[3]);
+			return -1;
+		}
+		if (!fpout)
+		{
+			printf("%s: FAILED [open]\n", argv[5]);
+			return -1;
+		}
 		//размер файла	
 		long nFileLen = 0;
 		if (fpin)
@@ -123,7 +145,12 @@ int main(int argc, char* argv[]) {
 			fclose(fpin);
 		}
 		fpin = fopen(argv[3], "rb");
-		
+		if (!fpin)
+		{
+			printf("%s: FAILED [open]\n", argv[3]);
+			return -1;
+		}
+
 		fseek(fpin, nFileLen-8, SEEK_SET);
 		fread(mac1, 1, 8, fpin);
 
@@ -180,9 +207,9 @@ int main(int argc, char* argv[]) {
 int help() {
 	printf(
 		"------------------------------------------------------------------------------------------------------\n"
-		"	lab1.exe  -e -f <file> -p <password>                   encrypt \n"
-		"	lab1.exe  -d -f <file> -p <password>                   decrypt \n"
-		"	lab1.exe  -h											help\n"
+		"	lab1.exe  -e -fin <file> -fout <file> -p <password>                   encrypt \n"
+		"	lab1.exe  -d -fin <file> -fout <file> -p <password>                   decrypt \n"
+		"	lab1.exe  -h														help\n"
 		"------------------------------------------------------------------------------------------------------\n"
 	);
 	return 0;
