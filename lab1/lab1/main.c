@@ -56,11 +56,15 @@ int main(int argc, char* argv[]) {
 		if (!fpin)
 		{
 			printf("%s: FAILED [open]\n", argv[3]);
+			fclose(fpin);
+			fclose(fpout);
 			return -1;
 		}
 		if (!fpout)
 		{
 			printf("%s: FAILED [open]\n", argv[5]);
+			fclose(fpin);
+			fclose(fpout);
 			return -1;
 		}
 	//размер файла	
@@ -73,6 +77,8 @@ int main(int argc, char* argv[]) {
 		if (!fpin)
 		{
 			printf("%s: FAILED [open]\n", argv[3]);
+			fclose(fpin);
+			fclose(fpout);
 			return -1;
 		}
 
@@ -84,7 +90,6 @@ int main(int argc, char* argv[]) {
 	//построение ключа по паролю	
 		beltPBKDF(theta, (const octet*)pwd, strLen((const char*)pwd), 10000, iv, 16);
 		beltDWPStart(state, theta, 32, iv);
-		beltDWPStepG(mac, state);
 
 		while (nFileLen >= 0)
 		{
@@ -99,18 +104,21 @@ int main(int argc, char* argv[]) {
 					fclose(fpin);
 					fclose(fpout);
 					printf("%s: FAILED [read]\n", argv[3]);
+					fclose(fpin);
+					fclose(fpout);
 					return -1;
 				}
 				break;
 			}
-
-
 			nFileLen -= 64;
+
 			beltDWPStepE(buf, bufCount, state);
+			beltDWPStepA(buf, bufCount, state);
+			
 			fwrite(buf, 1, bufCount, fpout);
 		}
 
-		
+		beltDWPStepG(mac, state);
 
 	//запись имитовставки
 		fwrite(mac, 1, 8, fpout);
@@ -129,11 +137,15 @@ int main(int argc, char* argv[]) {
 		if (!fpin)
 		{
 			printf("%s: FAILED [open]\n", argv[3]);
+			fclose(fpin);
+			fclose(fpout);
 			return -1;
 		}
 		if (!fpout)
 		{
 			printf("%s: FAILED [open]\n", argv[5]);
+			fclose(fpin);
+			fclose(fpout);
 			return -1;
 		}
 		//размер файла	
@@ -148,6 +160,8 @@ int main(int argc, char* argv[]) {
 		if (!fpin)
 		{
 			printf("%s: FAILED [open]\n", argv[3]);
+			fclose(fpin);
+			fclose(fpout);
 			return -1;
 		}
 
@@ -160,15 +174,7 @@ int main(int argc, char* argv[]) {
 	//построение ключа по паролю	
 		beltPBKDF(theta, (const octet*)argv[7], strLen((const char*)argv[7]), 10000, iv, 16);
 		beltDWPStart(state, theta, 32, iv);
-		beltDWPStepG(mac, state);
 
-	//проверка имитовставки
-		if (strCmp(mac, mac1) != 0) {
-			printf("Failed\n");
-			fclose(fpin);
-			fclose(fpout);
-			return 0;
-		}
 
 		nFileLen -= 24;
 		while (nFileLen > 0)
@@ -184,14 +190,28 @@ int main(int argc, char* argv[]) {
 					fclose(fpin);
 					fclose(fpout);
 					printf("%s: FAILED [read]\n", argv[3]);
+					fclose(fpin);
+					fclose(fpout);
 					return -1;
 				}
 				break;
 			}
 			nFileLen -= 64;
+
+			beltDWPStepA(buf, bufCount, state);
 			beltDWPStepD(buf, bufCount, state);
 
 			fwrite(buf, 1, bufCount, fpout);
+		}
+
+		beltDWPStepG(mac, state);
+
+		//проверка имитовставки
+		if (strCmp(mac, mac1) != 0) {
+			printf("Failed\n");
+			fclose(fpin);
+			fclose(fpout);
+			return 0;
 		}
 		
 		fclose(fpin);
